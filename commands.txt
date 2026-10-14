@@ -1,0 +1,4 @@
+from pyspark.sql import SparkSession
+
+# Create session
+spark = SparkSession.builder.appName("IPL Data Analysis").getOrCreate()
