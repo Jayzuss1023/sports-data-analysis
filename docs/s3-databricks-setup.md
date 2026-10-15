@@ -20,7 +20,7 @@ Use your own names, or the examples below:
 1. In the AWS console, open S3 and choose **Create bucket**.
 2. Name the bucket. Names are global, so `ipl-analyst-data-project` fails if someone else already took it. Pick another name and use that name everywhere below.
 3. Choose a region close to your Databricks workspace. Leave **Block all public access** on. Databricks reaches the files through the IAM role, not through a public URL.
-4. Create the bucket, open it, and upload the five CSV files at the bucket root (not inside a folder, unless you add that folder to the paths in the notebook):
+4. Download the five CSV files from the Kaggle dataset [IPL data till 2017](https://www.kaggle.com/datasets/raghu07/ipl-data-till-2017?resource=download). Create the bucket, open it, and upload those files at the bucket root (not inside a folder, unless you add that folder to the paths in the notebook):
 
 - `Ball_By_Ball.csv`
 - `Match.csv`

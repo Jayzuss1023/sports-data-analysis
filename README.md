@@ -15,6 +15,8 @@ It is a learning record of that full path: storage setup, typed schemas, DataFra
 
 ## Data
 
+The five CSV files come from the Kaggle dataset [IPL data till 2017](https://www.kaggle.com/datasets/raghu07/ipl-data-till-2017?resource=download). Download that archive, then upload the files in the [S3 and Databricks setup](docs/s3-databricks-setup.md).
+
 Each file is one grain of the IPL dataset.
 
 | File | One row represents |
