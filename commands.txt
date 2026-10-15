@@ -1,4 +1,400 @@
 from pyspark.sql import SparkSession
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Create session
+{% comment %} Create a spark session {% endcomment %}
 spark = SparkSession.builder.appName("IPL Data Analysis").getOrCreate()
+
+{% comment %} Read the CSV but only returns string columns {% endcomment %}
+ball_by_ball_df = spark.read.format('csv').option('header','true').load('s3://ipl-analyst-data-project/Ball_By_Ball.csv')
+
+{% comment %} Reads CSV, but with .option('inferSchena','true') - the format for the columns are properly assigned. String, Integer, Data, etc. {% endcomment %}
+ball_by_ball_df2 = spark.read.format('csv').option('header','true').option('inferSchema','true').load('s3://ipl-analyst-data-project/Ball_By_Ball.csv')
+
+{% comment %} Load the first 5 rows of data {% endcomment %}
+ball_by_ball_df.show(5)
+
+{% comment %} Creating your own structured schema to reassure any data that comes in is stored into it's proper format {% endcomment %}
+ {% comment %} Spark will apply the newly built schema on top of the data source provided {% endcomment %}
+from pyspark.sql.types import StructField, IntegerType, StringType, BooleanType, DateType, DecimalType
+
+ball_by_ball_schema = StructType([
+    StructField('match_id', IntegerType(), True),
+    StructField('over_id', IntegerType(), True),
+    StructField('ball_id', IntegerType(), True),
+    StructField('innings_no', IntegerType(), True),
+    StructField('team_batting', StringType(), True),
+    StructField('team_bowling', StringType(), True),
+    StructField('striker_batting_position', IntegerType(), True),
+    StructField('extra_type', StringType(), True),
+    StructField('runs_scored', IntegerType(), True),
+    StructField('extra runs', IntegerType(), True),
+    StructField('wides', IntegerType(), True),
+    StructField('legbyes', IntegerType(), True),
+    StructField('byes', IntegerType(), True),
+    StructField('noballs', IntegerType(), True),
+    StructField("penalty", IntegerType(), True),
+    StructField("bowler_extras", IntegerType(), True),
+    StructField("out_type", StringType(), True),
+    StructField("caught", BooleanType(), True),
+    StructField("bowled", BooleanType(), True),
+    StructField("run_out", BooleanType(), True),
+    StructField("lbw", BooleanType(), True),
+    StructField("retired_hurt", BooleanType(), True),
+    StructField("stumped", BooleanType(), True),
+    StructField("caught_and_bowled", BooleanType(), True),
+    StructField("hit_wicket", BooleanType(), True),
+    StructField("obstructingfeild", BooleanType(), True),
+    StructField("bowler_wicket", BooleanType(), True),
+    StructField("match_date", DateType(), True),
+    StructField("season", IntegerType(), True),
+    StructField("striker", IntegerType(), True),
+    StructField("non_striker", IntegerType(), True),
+    StructField("bowler", IntegerType(), True),
+    StructField("player_out", IntegerType(), True),
+    StructField("fielders", IntegerType(), True),
+    StructField("striker_match_sk", IntegerType(), True),
+    StructField("strikersk", IntegerType(), True),
+    StructField("nonstriker_match_sk", IntegerType(), True),
+    StructField("nonstriker_sk", IntegerType(), True),
+    StructField("fielder_match_sk", IntegerType(), True),
+    StructField("fielder_sk", IntegerType(), True),
+    StructField("bowler_match_sk", IntegerType(), True),
+    StructField("bowler_sk", IntegerType(), True),
+    StructField("playerout_match_sk", IntegerType(), True),
+    StructField("battingteam_sk", IntegerType(), True),
+    StructField("bowlingteam_sk", IntegerType(), True),
+    StructField("keeper_catch", BooleanType(), True),
+    StructField("player_out_sk", IntegerType(), True),
+    StructField("matchdatesk", DateType(), True)
+])
+
+{% comment %} Create the proper formatted schema for match.csv and read it {% endcomment %}
+match_schema = StructType([
+    StructField('match_sk', IntegerType(), True),
+    StructField('match_id', IntegerType(), True),
+    StructField('team1', StringType(), True),
+    StructField('team2', StringType(), True),
+    StructField('match_date', DateType(), True),
+    StructField('season_year', IntegerType(), True),
+    StructField("venue_name", StringType(), True),
+    StructField("city_name", StringType(), True),
+    StructField("country_name", StringType(), True),
+    StructField("toss_winner", StringType(), True),
+    StructField("match_winner", StringType(), True),
+    StructField("toss_name", StringType(), True),
+    StructField("win_type", StringType(), True),
+    StructField("outcome_type", StringType(), True),
+    StructField("manofmach", StringType(), True),
+    StructField("win_margin", IntegerType(), True),
+    StructField("country_id", IntegerType(), True)
+])
+match_df = spark.read.schema(match_schema).format("csv").option("header","true").load("s3://ipl-data-analysis-project/Match.csv")
+
+{% comment %} Create the proper formatted schema for player.csv and read it {% endcomment %}
+player_schema = StructType([
+    StructField("player_sk", IntegerType(), True),
+    StructField("player_id", IntegerType(), True),
+    StructField("player_name", StringType(), True),
+    StructField("dob", DateType(), True),
+    StructField("batting_hand", StringType(), True),
+    StructField("bowling_skill", StringType(), True),
+    StructField("country_name", StringType(), True)
+])
+player_df = spark.read.schema(player_schema).format("csv").option("header","true").load("s3://ipl-data-analysis-project/Player.csv")
+
+{% comment %} Create the proper formatted schema for player_match.csv and read it {% endcomment %}
+player_match_schema = StructType([
+    StructField("player_match_sk", IntegerType(), True),
+    StructField("playermatch_key", DecimalType(), True),
+    StructField("match_id", IntegerType(), True),
+    StructField("player_id", IntegerType(), True),
+    StructField("player_name", StringType(), True),
+    StructField("dob", DateType(), True),
+    StructField("batting_hand", StringType(), True),
+    StructField("bowling_skill", StringType(), True),
+    StructField("country_name", StringType(), True),
+    StructField("role_desc", StringType(), True),
+    StructField("player_team", StringType(), True),
+    StructField("opposit_team", StringType(), True),
+    StructField("season_year", IntegerType(), True),
+    StructField("is_manofthematch", BooleanType(), True),
+    StructField("age_as_on_match", IntegerType(), True),
+    StructField("isplayers_team_won", BooleanType(), True),
+    StructField("batting_status", StringType(), True),
+    StructField("bowling_status", StringType(), True),
+    StructField("player_captain", StringType(), True),
+    StructField("opposit_captain", StringType(), True),
+    StructField("player_keeper", StringType(), True),
+    StructField("opposit_keeper", StringType(), True)
+])
+player_match_df = spark.read.schema(player_match_schema).format("csv").option("header","true").load("s3://ipl-data-analysis-project/Player_match.csv")
+
+{% comment %} Create the proper formatted schema for team_schema.csv and read it {% endcomment %}
+team_schema = StructType([
+    StructField("team_sk", IntegerType(), True),
+    StructField("team_id", IntegerType(), True),
+    StructField("team_name", StringType(), True)
+])
+team_df = spark.read.schema(team_schema).format("csv").option("header","true").load("s3://ipl-data-analysis-project/Team.csv")
+ 
+{% comment %} Lazy Evaluation - Spark waits to read / filter the data until a result is needed {% endcomment %}
+ {% comment %} Create as many transformtions so Spark can convert the logic and execute the code once the action is runned {% endcomment %}
+{% comment %} Filter to include only valid deliveries (exclude extras like wides and no balls for specific analyses) {% endcomment %}
+{% comment %} Keeping where wides and noballs are 0 then return the smaller DataFrame back {% endcomment %}
+ball_by_ball_df2 = ball_by_ball_df2.filter((col('wides') == 0) & col('noballs')==0)
+
+{% comment %} Aggregation: Calculate the total and average runs scored in each match and inning {% endcomment %}
+ {% comment %} group by and agg are transformations, so Spark only records the plan. Totals are not calculated until an action runs it {% endcomment %}
+total_and_avg_runs = ball_by_ball_df2.groupBy('MatcH_id', 'Innings_No').agg(
+    sum('Runs_Scored').alias('total_runs'),
+    avg('Runs_Scored').alias('average_runs')
+)
+
+{% comment %} Window Function: Calculate running total of runs in each match for each over {% endcomment %}
+{% comment %} partitionBy('MatcH_id', 'Innings_No') splits the rows into separate groups. {% endcomment %}
+{% comment %} orderBy('Over_id') sort each of the groups by 'over_id', so the sum moves forward from the first 'over' toward the last. {% endcomment %}
+WindowSpec = Window.partitionBy('MatcH_id', 'Innings_No').orderBy('Over_id')
+ball_by_ball_df2 = ball_by_ball_df2.withColumn(
+    'running_total_runs',
+    sum('Runs_Scored').over(WindowSpec)
+)
+ball_by_ball_df2.select('match_id', 'innings_no', 'over_id', 'runs_scored', 'running_total_runs').show(20)
+
+{% comment %} Conditional Columns: Flag for high impact balls (either a wicket, or more than 6 runs including extras) {% endcomment %}
+{% comment %} Add a a extra column 'high_impact' as a Condition Statement {% endcomment %}
+ball_by_ball_df2 = ball_by_ball_df2.withColumn(
+    'high_impact',
+    when((col('runs_scored') + col('extra_runs') > 6) | (col('bowler_wicket') == True), True).otherwise(False)
+)
+ball_by_ball_df2.show(5)
+
+from pyspark.sql.functions import year, month, dayofmonth, when
+
+
+{% comment %} match_df transformations {% endcomment %}
+{% comment %} Extracting year, month, and day from the match date for more detailed item-based analysis {% endcomment %}
+match_df = match_df.withColumn('year', year('match_date'))
+match_df = match_df.withColumn('month', month('match_date'))
+match_df = match_df.withColumn('day', dayofmonth('match_date'))
+
+{% comment %} High margin win: categorizing win margins into 'high', 'medium', and 'low' {% endcomment %}
+match_df = match_df.withColumn(
+    'win_margin_category',
+    when(col('win_margin') >= 100, 'High')
+    .when((col('win_margin') >= 50) & (col('win_margin') < 100), 'Medium')
+    .otherwise('Low')
+)
+
+{% comment %} Analyze the impact of the toss: who wins the toss and the match {% endcomment %}
+match_df = match_df.withColumn(
+    'toss_match_winner',
+    when(col('toss_winner') == col('match_winner'), 'Yes').otherwise('No')
+)
+
+# Show the enhanced match DataFrame
+match_df.show(5)
+
+
+{% comment %} player_df transformation {% endcomment %}
+from pyspark.sql.functions import lower, regexp_replace
+
+{% comment %} Normalize and clean player names {% endcomment %}
+player_df = player_df.withColumn('player_name', lower(regexp_replace('player_name', '[^a-zA-Z0-9]', '')))
+
+{% comment %} Handle missing values in 'batting_hand' and 'bowling_skill' with default 'unkown' {% endcomment %}
+player_df = player_df.na.fill({'batting_hand': 'unknown', 'bowling_skill': 'unknown'})
+
+{% comment %} Categorizing players based on batting hand {% endcomment %}
+player_df = player_df.withColumn(
+    'batting_style',
+    when(lower(col('batting_hand')).contains('left'), 'Left-Handed').otherwise("Right-Handed")
+)
+
+player_df.show(5)
+
+
+{% comment %} player_match_df transformation {% endcomment %}
+from pyspark.sql.functions import col, when, current_date, expr
+
+{% comment %} Add a 'veteran_status' column based on player age {% endcomment %}
+player_match_df = player_match_df.withColumn(
+    'veteran_status',
+    when(col('age_as_on_match') >= 35, 'Veteran').otherwise('Non-Veteran')
+)
+
+{% comment %} Dynamic column to calulate years since debut {% endcomment %}
+player_match_df = player_match_df.withColumn(
+    'years_since_debut',
+    (year(current_date()) - col("season_year"))
+)
+
+{% comment %} Show the enriched DataFrame   {% endcomment %}
+player_match_df.show(5)
+
+{% comment %} Apply a name to a DataFrame to use in SQL {% endcomment %}
+ball_by_ball_df2.createOrReplaceTempView("ball_by_ball")
+match_df.createOrReplaceTempView("match")
+player_df.createOrReplaceTempView('player')
+team_df.createOrReplaceTempView('team')
+
+ball_by_ball_df2.columns
+
+{% comment %} 
+ Get player_name, season_year, total_runs
+group by player and season year  
+order by season_year and total_runs in descending order
+{% endcomment %}
+top_scoring_batsmen_per_season = spark.sql("""
+    SELECT
+    p.player_name,
+    m.season_year,
+    SUM(b.runs_scored) AS total_runs
+    FROM ball_by_ball b
+    JOIN match m ON b.match_id = m.match_id
+    JOIN player_match pm ON m.match_id = pm.match_id AND b.striker = pm.player_id
+    JOIN player p ON p.player_id = pm.player_id
+    GROUP BY p.player_name, m.season_year
+    ORDER BY m.season_year, total_runs DESC
+""")
+top_scoring_batsmen_per_season.show(30)
+
+
+{% comment %} SELECT Statement and Plot view for economical_bowlers_powerplay {% endcomment %}
+economical_bowlers_powerplay = spark.sql("""
+    SELECT
+    p.player_name,
+    AVG(b.runs_scored) AS avg_runs_per_ball,
+    COUNT(b.bowler_wicket) AS total_wickets
+    FROM ball_by_ball b
+    JOIN player_match pm on b.match_id = pm.match_id AND b.bowler = pm.player_id
+    JOIN player p oN pm.player_id = p.player_id
+    WHERE b.over_id <= 6
+    GROUP BY p.player_name
+    ORDER BY avg_runs_per_ball, total_wickets DESC
+""")
+economical_bowlers_powerplay.show()
+
+{% comment %} Assuming 'economical_bowlers_powerplay' is already executed and available as a Spark DataFrame {% endcomment %}
+economical_bowlers_pd = economical_bowlers_powerplay.toPandas()
+# Visualizing using Matplotlib
+plt.figure(figsize=(12,8))
+# Limiting to top 10 for clarity in the plot
+top_economical_bowlers = economical_bowlers_pd.nsmallest(10, 'avg_runs_per_ball')
+plt.bar(top_ecomical_bowlers['player_name'], top_economical_bowlers['avg_runs_per_ball'], color='skyblue')
+plt.xlabel('Bowler Name')
+plt.ylabel('Average Runs per Ball')
+plt.title('Most Economical Bowlers in Powerplay Overs (Top 10)')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+{% comment %} SELECT Statement and Graph view for toss_impact_individual_match {% endcomment %}
+toss_impact_individual_matched = spark.sql("""
+    SELECT m.match_id, m.toss_winner, m.toss_name, m.match_winner, CASE WHEN m.toss_winner = m.match_winner THEN 'Won' ELSE 'Lost' END AS match_outcome
+    FROM match m
+    WHERE m.toss_name IS NOT NULL
+    ORDER BY m.match_id
+""")
+toss_impact_individual_matched.show()
+
+{% comment %} Creating a countplot to show win/loss after winning toss {% endcomment %}
+{% comment %} The ha='right' parameter anchors each label's right edge to its tick mark, so the rotated team names line up correctly under their bars instead of shifting off to the side. {% endcomment %}
+{% comment %} hue="match_outcome" — The hue parameter splits each bar group by a second categorical column and colors them differently. Here, match_outcome contains either "Won" or "Lost" (created in cell 24 via the CASE WHEN toss_winner = match_winner THEN 'Won' ELSE 'Lost' logic). So for each team on the x-axis, you get two side-by-side bars: one color for matches they won after winning the toss, another for matches they lost. The legend shows which color maps to which outcome. {% endcomment %}
+{% comment %} data=toss_impact_pd — This tells seaborn which DataFrame to pull columns from. The x="toss_winner" and hue="match_outcome" are column names inside toss_impact_pd. {% endcomment %}
+toss_impact_pd = toss_impact_individual_matches.toPandas()
+plt.figure(figsize=(9,6))
+sns.countplot(x="toss_winner", hue="match_outcome", data=toss_impact_pd)
+plt.title('Impact of Winning Toss on Match Outcomes')
+plt.xlabel('Toss Winner')
+plt.ylabel('Number of Matches')
+plt.legend(title='Match Outcome')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
+
+
+{% comment %} SELECT Statement and Plot graph for average_runs_in_wins  {% endcomment %}
+average_runs_in_wins = spark.sql("""
+SELECT p.player_name, AVG(b.runs_scored) AS avg_runs_in_wins, COUNT(*) AS innings_played
+FROM ball_by_ball b
+JOIN player_match pm ON b.match_id = pm.match_id AND b.striker = pm.player_id
+JOIN player p ON pm.player_id = p.player_id
+JOIN match m ON pm.match_id = m.match_id
+WHERE m.match_winner = pm.player_team
+GROUP BY p.player_name
+ORDER BY avg_runs_in_wins ASC
+""")
+average_runs_in_wins.show()
+
+{% comment %} Using seaborn to plot average runs in winning matches {% endcomment %}
+average_runs_pd = average_runs_in_wins.toPandas()
+plt.figure(figsize=(12, 8))
+top_scorers = average_runs_pd.nlargest(10, 'avg_runs_in_wins')
+sns.barplot(x='player_name', y='avg_runs_in_wins', data=top_scorers)
+plt.title("Average Runs Scored by Batsmen in Winning Matches (Top 10)")
+plt.xlabel('Player Name')
+plt.ylabel('Average Runs in Wins')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
+
+
+
+{% comment %} SQL Query and Plot {% endcomment %}
+scores_by_venue = spark.sql("""
+    SELECT venue_name, AVG(total_runs) AS average_score, MAX(total_runs) AS highest_score
+    FROM (
+        SELECT ball_by_ball.match_id, match.venue_name, SUM(runs_scored) as total_runs
+        FROM ball_by_ball
+        JOIN match ON ball_by_ball.match_id = match.match_id
+        GROUP BY ball_by_ball.match_id, match.venue_name
+    )
+    GROUP BY venue_name
+    ORDER BY average_score DESC                            
+""")
+scores_by_venue_pd = scores_by_venue.toPandas()
+plt.figure(figsize=(14, 8))
+sns.barplot(x='average_score', y='venue_name', data=scores_by_venue_pd, palette='viridis', legend=False)
+plt.title("Distribution of Scores by Venue")
+plt.xlabel('Average Score')
+plt.ylabel('Venue')
+plt.show()
+
+
+{% comment %} SQL Query and Plot {% endcomment %}
+dismissal_types = spark.sql("""
+    SELECT out_type, COUNT(*) AS frequency
+    FROM ball_by_ball
+    WHERE out_type IS NOT NULL
+    GROUP BY out_type
+    ORDER BY frequency DESC
+""")
+
+dismissal_types_pd = dismissal_types.toPandas()
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x="frequency", y='out_type', data=dismissal_types_pd, palette='pastel')
+plt.title('Most Frequency Dismissal Types')
+plt.xlabel('Frequency')
+plt.ylabel('Dismissal Type')
+plt.show()
+
+{% comment %} SQL Query and Plot {% endcomment %}
+team_toss_win_performance = spark.sql("""
+    SELECT team1, COUNT(*) AS matches_played, SUM(CASE WHEN toss_winner = match_winner THEN 1 ELSE 0 END) AS wins_after_toss
+    FROM match
+    WHERE toss_winner = team1
+    GROUP BY team1
+    ORDER BY wins_after_toss DESC
+""")
+
+team_toss_win_pd = team_toss_win_performance.toPandas()
+
+plt.figure(figsize=(12, 8))
+sns.barplot(x='wins_after_toss', y='team1', data=team_toss_win_pd, palette='viridis', legend=False)
+plt.title('Team Performance After Winning Toss')
+plt.xlabel('Wins After Winning Toss')
+plt.ylabel('Team')
+plt.show()
